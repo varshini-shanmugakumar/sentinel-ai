@@ -4,11 +4,14 @@ import com.varshini.sentinel.transaction.dto.ApiErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.stream.Collectors;
 
 
 @RestControllerAdvice
@@ -19,7 +22,7 @@ public class GlobalExceptionHandler {
                 .timeStamp(Instant.now())
                 .httpStatus(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.name())
-                .message(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message("Source and Destination accounts cannot be the same")
                 .path(request.getRequestURI())
                 .build();
 
@@ -27,12 +30,18 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(value = MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiErrorResponse> handleMethodArgumentNotValidException(HttpServletRequest request){
+    public ResponseEntity<ApiErrorResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException exception, HttpServletRequest request){
+        List<FieldError> fieldErrors = exception.getBindingResult().getFieldErrors();
+        String msg = fieldErrors.stream()
+                    .map(error ->
+                        error.getField() + " : " + error.getDefaultMessage())
+                    .collect(Collectors.joining(", "));
+
         ApiErrorResponse errorResponse = ApiErrorResponse.builder()
                 .timeStamp(Instant.now())
                 .httpStatus(HttpStatus.BAD_REQUEST.value())
                 .error(HttpStatus.BAD_REQUEST.name())
-                .message(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message(msg)
                 .path(request.getRequestURI())
                 .build();
 
