@@ -4,22 +4,28 @@ import com.varshini.sentinel.transaction.dto.CreateTransactionRequest;
 import com.varshini.sentinel.transaction.exception.SameAccountTransferException;
 import com.varshini.sentinel.transaction.model.Transaction;
 import com.varshini.sentinel.transaction.model.TransactionStatus;
+import com.varshini.sentinel.transaction.repository.TransactionRepository;
 import com.varshini.sentinel.transaction.service.TransactionService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.Objects;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class TransactionServiceImpl implements TransactionService {
+    private final TransactionRepository transactionRepository;
+
     public Transaction  createTransaction(CreateTransactionRequest request) throws SameAccountTransferException {
         Transaction transaction = new Transaction();
         transaction.setTransactionId(UUID.randomUUID());
         transaction.setStatus(TransactionStatus.PENDING);
         transaction.setTimeStamp(Instant.now());
         // building from request
-        if(Objects.equals(request.getFromAccount(), request.getToAccount())){
+        String from = request.getFromAccount();
+        String to = request.getToAccount();
+        if (from != null && from.equalsIgnoreCase(to)) {
             throw new SameAccountTransferException("Source and Destination accounts cannot be the same");
         }
         transaction.setFromAccount(request.getFromAccount());
@@ -27,6 +33,6 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setAmount(request.getAmount());
         transaction.setCurrency(request.getCurrency());
 
-        return transaction;
+        return transactionRepository.save(transaction);
     }
 }
