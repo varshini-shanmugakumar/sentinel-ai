@@ -2,6 +2,8 @@ package com.varshini.sentinel.transaction.model;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -10,8 +12,11 @@ import java.time.Instant;
 
 @Data
 @NoArgsConstructor
+@Document(collection = "transactions")
 public class Transaction {
-    private UUID transactionId;
+    @Id
+    private String id; // MongoDB identifier
+    private UUID transactionId; // Business identifier
     private String fromAccount;
     private String toAccount;
     private BigDecimal amount;
