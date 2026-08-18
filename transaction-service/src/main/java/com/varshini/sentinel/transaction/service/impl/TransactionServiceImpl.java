@@ -23,7 +23,9 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setStatus(TransactionStatus.PENDING);
         transaction.setTimeStamp(Instant.now());
         // building from request
-        if(request.getFromAccount().equalsIgnoreCase(request.getToAccount())){
+        String from = request.getFromAccount();
+        String to = request.getToAccount();
+        if (from != null && from.equalsIgnoreCase(to)) {
             throw new SameAccountTransferException("Source and Destination accounts cannot be the same");
         }
         transaction.setFromAccount(request.getFromAccount());
