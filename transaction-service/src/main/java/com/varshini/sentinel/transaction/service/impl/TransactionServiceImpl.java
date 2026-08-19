@@ -2,6 +2,7 @@ package com.varshini.sentinel.transaction.service.impl;
 
 import com.varshini.sentinel.transaction.dto.CreateTransactionRequest;
 import com.varshini.sentinel.transaction.exception.SameAccountTransferException;
+import com.varshini.sentinel.transaction.exception.TransactionNotFoundException;
 import com.varshini.sentinel.transaction.model.Transaction;
 import com.varshini.sentinel.transaction.model.TransactionStatus;
 import com.varshini.sentinel.transaction.repository.TransactionRepository;
@@ -34,5 +35,12 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setCurrency(request.getCurrency());
 
         return transactionRepository.save(transaction);
+    }
+
+    @Override
+    public Transaction getTransactionById(UUID transactionId) {
+        return transactionRepository.findByTransactionId(transactionId)
+                .orElseThrow(() -> new TransactionNotFoundException(
+                        "Transaction not found: "+transactionId));
     }
 }
