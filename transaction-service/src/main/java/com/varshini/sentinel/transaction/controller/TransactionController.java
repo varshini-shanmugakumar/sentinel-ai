@@ -23,7 +23,7 @@ public class TransactionController {
         return ResponseEntity.status(HttpStatus.CREATED).body(transaction);
     }
 
-    @GetMapping("transactions/{transactionId}")
+    @GetMapping("/transactions/{transactionId}")
     public ResponseEntity<Transaction> getTransactionById(@PathVariable UUID transactionId) {
         Transaction transaction = transactionService.getTransactionById(transactionId);
         return ResponseEntity.ok(transaction);
