@@ -7,10 +7,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RequiredArgsConstructor
 @RestController
@@ -22,5 +21,11 @@ public class TransactionController {
     public ResponseEntity<Transaction> createTransaction(@Valid @RequestBody CreateTransactionRequest request) {
         Transaction transaction = transactionService.createTransaction(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(transaction);
+    }
+
+    @GetMapping("/transactions/{transactionId}")
+    public ResponseEntity<Transaction> getTransactionById(@PathVariable UUID transactionId) {
+        Transaction transaction = transactionService.getTransactionById(transactionId);
+        return ResponseEntity.ok(transaction);
     }
 }

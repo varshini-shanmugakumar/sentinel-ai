@@ -2,6 +2,7 @@ package com.varshini.sentinel.transaction.service;
 
 import com.varshini.sentinel.transaction.dto.CreateTransactionRequest;
 import com.varshini.sentinel.transaction.exception.SameAccountTransferException;
+import com.varshini.sentinel.transaction.exception.TransactionNotFoundException;
 import com.varshini.sentinel.transaction.model.Transaction;
 import com.varshini.sentinel.transaction.model.TransactionStatus;
 import com.varshini.sentinel.transaction.repository.TransactionRepository;
@@ -13,6 +14,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -75,5 +78,44 @@ class TransactionServiceImplTest {
                 () -> transactionService.createTransaction(request)
         );
         verify(transactionRepository, never()).save(any(Transaction.class));
+    }
+
+    @Test
+    void shouldGetTransactionByIdSuccessfully() {
+        UUID transactionId = UUID.randomUUID();
+
+        Transaction transaction = new Transaction();
+        transaction.setTransactionId(transactionId);
+        transaction.setFromAccount("ACC1001");
+        transaction.setToAccount("ACC2001");
+        transaction.setAmount(new BigDecimal("1000"));
+        transaction.setCurrency("INR");
+        transaction.setStatus(TransactionStatus.PENDING);
+
+        when(transactionRepository.findByTransactionId(transactionId))
+                .thenReturn(Optional.of(transaction));
+
+        Transaction result = transactionService.getTransactionById(transactionId);
+
+        assertNotNull(result);
+        assertEquals(transactionId, result.getTransactionId());
+        assertEquals("ACC1001", result.getFromAccount());
+
+        verify(transactionRepository).findByTransactionId(transactionId);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTransactionNotFound() {
+        UUID transactionId = UUID.randomUUID();
+
+        when(transactionRepository.findByTransactionId(transactionId))
+                .thenReturn(Optional.empty());
+
+        TransactionNotFoundException exception = assertThrows(
+                TransactionNotFoundException.class,
+                () -> transactionService.getTransactionById(transactionId));
+
+        assertEquals("Transaction not found: "+transactionId, exception.getMessage());
+        verify(transactionRepository).findByTransactionId(transactionId);
     }
 }

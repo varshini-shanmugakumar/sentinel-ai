@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -17,10 +18,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class GlobalExceptionHandlerTest {
+    GlobalExceptionHandler handler = new GlobalExceptionHandler();
+
     @Test
     void shouldHandleSameAccountTransferException() {
-        GlobalExceptionHandler handler = new GlobalExceptionHandler();
-
         HttpServletRequest request = mock(HttpServletRequest.class);
 
         when(request.getRequestURI())
@@ -49,8 +50,6 @@ class GlobalExceptionHandlerTest {
 
     @Test
     void shouldHandleMultipleValidationErrors() {
-        GlobalExceptionHandler handler = new GlobalExceptionHandler();
-
         MethodArgumentNotValidException exception =
                 mock(MethodArgumentNotValidException.class);
 
@@ -84,5 +83,27 @@ class GlobalExceptionHandlerTest {
                 );
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
+    }
+
+    @Test
+    void shouldHandleTransactionNotFoundException() {
+        TransactionNotFoundException exception =
+                new TransactionNotFoundException("Transaction not found");
+
+        MockHttpServletRequest request =  new MockHttpServletRequest();
+        request.setRequestURI("/api/v1/transactions/123");
+
+        ResponseEntity<ApiErrorResponse> response =
+                handler.handleTransactionNotFoundException(exception, request);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        ApiErrorResponse apiErrorResponse = response.getBody();
+
+        assertEquals(404, apiErrorResponse.getHttpStatus());
+        assertEquals("Not Found", apiErrorResponse.getError());
+        assertEquals("Transaction not found", apiErrorResponse.getMessage());
+        assertEquals("/api/v1/transactions/123", apiErrorResponse.getPath());
     }
 }
