@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RequiredArgsConstructor
@@ -27,5 +28,11 @@ public class TransactionController {
     public ResponseEntity<Transaction> getTransactionById(@PathVariable UUID transactionId) {
         Transaction transaction = transactionService.getTransactionById(transactionId);
         return ResponseEntity.ok(transaction);
+    }
+
+    @GetMapping("/transactions")
+    public ResponseEntity<List<Transaction>> getAllTransactions() {
+        List<Transaction> transactions = transactionService.getAllTransactions();
+        return ResponseEntity.ok(transactions);
     }
 }

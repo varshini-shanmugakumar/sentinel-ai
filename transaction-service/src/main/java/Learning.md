@@ -23,3 +23,5 @@ determined by business logic, not by the client.
    Service should have all business logic - so that it can be used from various endpoints (Eg: Kafka)
 7. @ExtendWith(MockitoExtension.class) is the annotation used to integrate the Mockito framework with the JUnit 
 Jupiter test lifecycle
+8. Controller testing is diff from usual service tests (unit tests) - bcoz controller handles HTTP requests
+Mockmvc - acts like fake postman inside my test 

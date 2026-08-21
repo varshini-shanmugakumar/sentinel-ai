@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -117,5 +118,38 @@ class TransactionServiceImplTest {
 
         assertEquals("Transaction not found: "+transactionId, exception.getMessage());
         verify(transactionRepository).findByTransactionId(transactionId);
+    }
+
+    @Test
+    void shouldGetAllTransactionsSuccessfully() {
+        Transaction transaction1 = new Transaction();
+        transaction1.setTransactionId(UUID.randomUUID());
+        transaction1.setFromAccount("ACC1001");
+        transaction1.setToAccount("ACC2001");
+
+        Transaction transaction2 = new Transaction();
+        transaction2.setTransactionId(UUID.randomUUID());
+        transaction2.setFromAccount("ACC1002");
+        transaction2.setToAccount("ACC2002");
+
+        List<Transaction> transactions = List.of(transaction1, transaction2);
+        when(transactionRepository.findAll()).thenReturn(transactions);
+
+        List<Transaction> result = transactionService.getAllTransactions();
+        assertNotNull(result);
+        assertEquals(transactions.size(), result.size());
+        assertEquals("ACC1001", result.get(0).getFromAccount());
+        assertEquals("ACC1002", result.get(1).getFromAccount());
+
+        verify(transactionRepository).findAll();
+    }
+
+    @Test
+    void shouldReturnEmptyListWhenNoTransactionsExist() {
+        when(transactionRepository.findAll()).thenReturn(List.of());
+        List<Transaction> result = transactionService.getAllTransactions();
+        assertNotNull(result);
+        assertTrue(result.isEmpty());
+        verify(transactionRepository).findAll();
     }
 }

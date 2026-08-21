@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -42,5 +43,10 @@ public class TransactionServiceImpl implements TransactionService {
         return transactionRepository.findByTransactionId(transactionId)
                 .orElseThrow(() -> new TransactionNotFoundException(
                         "Transaction not found: "+transactionId));
+    }
+
+    @Override
+    public List<Transaction> getAllTransactions(){
+        return transactionRepository.findAll();
     }
 }
