@@ -152,4 +152,43 @@ class TransactionServiceImplTest {
         assertTrue(result.isEmpty());
         verify(transactionRepository).findAll();
     }
+
+    @Test
+    void shouldUpdateTransactionStatusSuccessfully() {
+        UUID transactionId = UUID.randomUUID();
+
+        Transaction transaction = new Transaction();
+        transaction.setTransactionId(transactionId);
+        transaction.setFromAccount("ACC1001");
+        transaction.setToAccount("ACC2001");
+        transaction.setAmount(new BigDecimal("1000"));
+        transaction.setCurrency("INR");
+        transaction.setStatus(TransactionStatus.PENDING);
+
+        when(transactionRepository.findByTransactionId(transactionId))
+                .thenReturn(Optional.of(transaction));
+        when(transactionRepository.save(any(Transaction.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Transaction updatedTransaction = transactionService.updateTransactionStatus(transactionId, TransactionStatus.APPROVED);
+
+        assertEquals(TransactionStatus.APPROVED, updatedTransaction.getStatus());
+        verify(transactionRepository).save(transaction);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenTransactionNotFoundForUpdate() {
+        UUID transactionId = UUID.randomUUID();
+
+        when(transactionRepository.findByTransactionId(transactionId))
+                .thenReturn(Optional.empty());
+
+        TransactionNotFoundException exception = assertThrows(
+                TransactionNotFoundException.class,
+                () -> transactionService.updateTransactionStatus(transactionId,  TransactionStatus.APPROVED));
+
+        assertEquals("Transaction not found: "+transactionId, exception.getMessage());
+        verify(transactionRepository).findByTransactionId(transactionId);
+    }
+
 }

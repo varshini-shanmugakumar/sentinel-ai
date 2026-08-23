@@ -25,3 +25,5 @@ determined by business logic, not by the client.
 Jupiter test lifecycle
 8. Controller testing is diff from usual service tests (unit tests) - bcoz controller handles HTTP requests
 Mockmvc - acts like fake postman inside my test 
+9. PATCH vs PUT: apply partial modifications to existing resource, non-idempotent vs Replaces entire resource, idempotent
+10. Idempotency: making multiple identical requests to the server leaves the resource in the same state as the very first request

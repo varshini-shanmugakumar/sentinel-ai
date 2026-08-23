@@ -49,4 +49,14 @@ public class TransactionServiceImpl implements TransactionService {
     public List<Transaction> getAllTransactions(){
         return transactionRepository.findAll();
     }
+
+    @Override
+    public Transaction updateTransactionStatus(UUID transactionId, TransactionStatus status) {
+        Transaction transaction = transactionRepository.findByTransactionId(transactionId)
+                .orElseThrow(() -> new TransactionNotFoundException(
+                        "Transaction not found: "+transactionId
+                ));
+        transaction.setStatus(status);
+        return transactionRepository.save(transaction);
+    }
 }
