@@ -131,4 +131,39 @@ class TransactionControllerTest {
                 TransactionStatus.APPROVED
         );
     }
+
+    @Test
+    void shouldFilterTransactionsSuccessfully() throws Exception {
+        Transaction transaction1 = new Transaction();
+        transaction1.setTransactionId(UUID.randomUUID());
+        transaction1.setFromAccount("ACC1001");
+        transaction1.setToAccount("ACC1002");
+        transaction1.setAmount(new BigDecimal("10000"));
+        transaction1.setCurrency("INR");
+        transaction1.setStatus(TransactionStatus.PENDING);
+        transaction1.setTimeStamp(Instant.now());
+
+        Transaction transaction2 = new Transaction();
+        transaction2.setTransactionId(UUID.randomUUID());
+        transaction2.setFromAccount("ACC2001");
+        transaction2.setToAccount("ACC2002");
+        transaction2.setAmount(new BigDecimal("20000"));
+        transaction2.setCurrency("INR");
+        transaction2.setStatus(TransactionStatus.PENDING);
+        transaction2.setTimeStamp(Instant.now());
+
+        List<Transaction> transactions = List.of(transaction1, transaction2);
+
+        when(transactionService.getTransactionsByStatus(TransactionStatus.PENDING))
+                .thenReturn(transactions);
+
+        mockMvc.perform(get("/api/v1/transactions")
+                        .param("status", "PENDING"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].status").value("PENDING"))
+                .andExpect(jsonPath("$[1].status").value("PENDING"));
+
+        verify(transactionService).getTransactionsByStatus(TransactionStatus.PENDING);
+    }
 }
