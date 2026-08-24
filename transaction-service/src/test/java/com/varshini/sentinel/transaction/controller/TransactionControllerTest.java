@@ -1,13 +1,17 @@
 package com.varshini.sentinel.transaction.controller;
 
+import com.varshini.sentinel.transaction.dto.UpdateTransactionStatusRequest;
+import com.varshini.sentinel.transaction.exception.TransactionNotFoundException;
 import com.varshini.sentinel.transaction.model.Transaction;
 import com.varshini.sentinel.transaction.model.TransactionStatus;
 import com.varshini.sentinel.transaction.service.TransactionService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -17,6 +21,7 @@ import java.util.UUID;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -24,6 +29,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class TransactionControllerTest {
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockitoBean
     private TransactionService transactionService;
@@ -67,5 +75,60 @@ class TransactionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
         verify(transactionService).getAllTransactions();
+    }
+
+    @Test
+    void shouldUpdateStatusSuccessfully() throws Exception {
+        Transaction transaction = new Transaction();
+        transaction.setTransactionId(UUID.randomUUID());
+        transaction.setFromAccount("ACC1001");
+        transaction.setToAccount("ACC1002");
+        transaction.setAmount(new BigDecimal("10000"));
+        transaction.setCurrency("INR");
+        transaction.setStatus(TransactionStatus.PENDING);
+        transaction.setTimeStamp(Instant.now());
+
+        UpdateTransactionStatusRequest request = new UpdateTransactionStatusRequest();
+        request.setStatus(TransactionStatus.APPROVED);
+
+        when(transactionService.updateTransactionStatus(
+                transaction.getTransactionId(),
+                TransactionStatus.APPROVED
+        )).thenReturn(transaction);
+
+        mockMvc.perform(patch("/api/v1/transactions/{transactionId}/status",
+                                transaction.getTransactionId())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(request))
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PENDING"));
+
+        verify(transactionService).updateTransactionStatus(transaction.getTransactionId(), TransactionStatus.APPROVED);
+    }
+
+    @Test
+    void shouldThrowExceptionWhenNoTransactionToUpdate() throws Exception {
+        UUID transactionId = UUID.randomUUID();
+
+        UpdateTransactionStatusRequest request = new UpdateTransactionStatusRequest();
+        request.setStatus(TransactionStatus.APPROVED);
+
+        when(transactionService.updateTransactionStatus(
+                transactionId,
+                TransactionStatus.APPROVED
+        )).thenThrow(new TransactionNotFoundException(
+                "Transaction not found: " + transactionId
+        ));
+
+        mockMvc.perform(patch("/api/v1/transactions/{transactionId}/status",
+                transactionId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        ).andExpect(status().isNotFound());
+        verify(transactionService).updateTransactionStatus(
+                transactionId,
+                TransactionStatus.APPROVED
+        );
     }
 }
