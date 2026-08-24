@@ -1,6 +1,7 @@
 package com.varshini.sentinel.transaction.controller;
 
 import com.varshini.sentinel.transaction.dto.CreateTransactionRequest;
+import com.varshini.sentinel.transaction.dto.UpdateTransactionStatusRequest;
 import com.varshini.sentinel.transaction.model.Transaction;
 import com.varshini.sentinel.transaction.service.TransactionService;
 import jakarta.validation.Valid;
@@ -34,5 +35,11 @@ public class TransactionController {
     public ResponseEntity<List<Transaction>> getAllTransactions() {
         List<Transaction> transactions = transactionService.getAllTransactions();
         return ResponseEntity.ok(transactions);
+    }
+
+    @PatchMapping("/transactions/{transactionId}/status")
+    public ResponseEntity<Transaction> updateTransaction(@RequestBody UpdateTransactionStatusRequest request, @PathVariable UUID transactionId) {
+        Transaction transaction = transactionService.updateTransactionStatus(transactionId, request.getStatus());
+        return ResponseEntity.ok(transaction);
     }
 }
