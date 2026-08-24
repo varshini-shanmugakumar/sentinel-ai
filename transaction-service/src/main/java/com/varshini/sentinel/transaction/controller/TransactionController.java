@@ -3,6 +3,7 @@ package com.varshini.sentinel.transaction.controller;
 import com.varshini.sentinel.transaction.dto.CreateTransactionRequest;
 import com.varshini.sentinel.transaction.dto.UpdateTransactionStatusRequest;
 import com.varshini.sentinel.transaction.model.Transaction;
+import com.varshini.sentinel.transaction.model.TransactionStatus;
 import com.varshini.sentinel.transaction.service.TransactionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,8 +33,13 @@ public class TransactionController {
     }
 
     @GetMapping("/transactions")
-    public ResponseEntity<List<Transaction>> getAllTransactions() {
-        List<Transaction> transactions = transactionService.getAllTransactions();
+    public ResponseEntity<List<Transaction>> getAllTransactions(@RequestParam(required = false)TransactionStatus status) {
+        List<Transaction> transactions;
+        if(status == null) {
+            transactions = transactionService.getAllTransactions();
+        } else {
+            transactions = transactionService.getTransactionsByStatus(status);
+        }
         return ResponseEntity.ok(transactions);
     }
 

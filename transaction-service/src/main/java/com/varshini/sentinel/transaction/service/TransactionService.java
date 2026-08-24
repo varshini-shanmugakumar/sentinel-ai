@@ -14,4 +14,5 @@ public interface TransactionService {
     Transaction getTransactionById(UUID transactionId);
     List<Transaction> getAllTransactions();
     Transaction updateTransactionStatus(UUID transactionId, TransactionStatus status);
+    List<Transaction> getTransactionsByStatus(TransactionStatus status);
 }

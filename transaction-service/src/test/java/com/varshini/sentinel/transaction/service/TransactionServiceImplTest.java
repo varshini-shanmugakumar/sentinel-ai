@@ -191,4 +191,33 @@ class TransactionServiceImplTest {
         verify(transactionRepository).findByTransactionId(transactionId);
     }
 
+    @Test
+    void shouldFilterTransactionsSuccessfully() {
+        Transaction transaction1 = new Transaction();
+        transaction1.setTransactionId(UUID.randomUUID());
+        transaction1.setFromAccount("ACC1001");
+        transaction1.setToAccount("ACC2001");
+        transaction1.setAmount(new BigDecimal("1000"));
+        transaction1.setCurrency("INR");
+        transaction1.setStatus(TransactionStatus.PENDING);
+
+        Transaction transaction2 = new Transaction();
+        transaction2.setTransactionId(UUID.randomUUID());
+        transaction2.setFromAccount("ACC1002");
+        transaction2.setToAccount("ACC2002");
+        transaction2.setAmount(new BigDecimal("1000"));
+        transaction2.setCurrency("INR");
+        transaction2.setStatus(TransactionStatus.PENDING);
+
+        List<Transaction> transactions = List.of(transaction1, transaction2);
+
+        when(transactionRepository.findByStatus(TransactionStatus.PENDING))
+                .thenReturn(transactions);
+
+        List<Transaction> result = transactionService.getTransactionsByStatus(TransactionStatus.PENDING);
+        assertNotNull(result);
+        assertEquals(transactions, result);
+        verify(transactionRepository).findByStatus(TransactionStatus.PENDING);
+    }
+
 }

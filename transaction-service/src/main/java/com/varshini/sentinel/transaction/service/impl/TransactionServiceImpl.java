@@ -59,4 +59,9 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setStatus(status);
         return transactionRepository.save(transaction);
     }
+
+    @Override
+    public List<Transaction> getTransactionsByStatus(TransactionStatus status) {
+        return transactionRepository.findByStatus(status);
+    }
 }
