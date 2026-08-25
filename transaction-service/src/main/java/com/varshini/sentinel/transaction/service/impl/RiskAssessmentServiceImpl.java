@@ -12,15 +12,23 @@ import java.util.List;
 
 @Service
 public class RiskAssessmentServiceImpl implements RiskAssessmentService {
+
+    private static final BigDecimal HIGH_VALUE_THRESHOLD = BigDecimal.valueOf(100000);
+    private static final BigDecimal MEDIUM_VALUE_THRESHOLD = BigDecimal.valueOf(50000);
+
     @Override
     public RiskAssessment assessTransaction(Transaction transaction){
         int riskScore = 0;
         List<String> reasons = new ArrayList<>();
 
-        if(transaction.getAmount().compareTo(new BigDecimal(100000)) >= 0){
+        if(transaction.getAmount() == null){
+            throw new IllegalArgumentException("Amount must not be null");
+        }
+
+        if(transaction.getAmount().compareTo(HIGH_VALUE_THRESHOLD) >= 0){
             riskScore += 40;
             reasons.add("High value transaction");
-        } else if(transaction.getAmount().compareTo(new BigDecimal(50000)) >= 0){
+        } else if(transaction.getAmount().compareTo(MEDIUM_VALUE_THRESHOLD) >= 0){
             riskScore += 20;
             reasons.add("Medium value transaction");
         }
@@ -37,9 +45,9 @@ public class RiskAssessmentServiceImpl implements RiskAssessmentService {
     }
 
     private RiskLevel calculateRiskLevel(int riskScore){
-        if(riskScore > 50){
+        if(riskScore >= 40){
             return RiskLevel.HIGH;
-        } else if(riskScore > 20){
+        } else if(riskScore >= 20){
             return RiskLevel.MEDIUM;
         }
         return RiskLevel.LOW;

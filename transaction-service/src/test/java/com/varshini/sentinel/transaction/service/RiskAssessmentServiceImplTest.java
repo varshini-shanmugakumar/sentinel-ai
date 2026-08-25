@@ -22,13 +22,13 @@ class RiskAssessmentServiceImplTest {
     @Test
     void shouldTestHighValueTransaction(){
         Transaction transaction = new Transaction();
-        transaction.setAmount(BigDecimal.valueOf(1050000));
+        transaction.setAmount(BigDecimal.valueOf(100000));
 
         RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(transaction);
 
         assertNotNull(riskAssessment);
         assertEquals(40, riskAssessment.getRiskScore());
-        assertEquals(RiskLevel.MEDIUM, riskAssessment.getRiskLevel());
+        assertEquals(RiskLevel.HIGH, riskAssessment.getRiskLevel());
         assertTrue(riskAssessment.getReasons().contains("High value transaction"));
     }
 
@@ -41,14 +41,14 @@ class RiskAssessmentServiceImplTest {
 
         assertNotNull(riskAssessment);
         assertEquals(20, riskAssessment.getRiskScore());
-        assertEquals(RiskLevel.LOW, riskAssessment.getRiskLevel());
+        assertEquals(RiskLevel.MEDIUM, riskAssessment.getRiskLevel());
         assertTrue(riskAssessment.getReasons().contains("Medium value transaction"));
     }
 
     @Test
     void shouldTestLowValueTransaction(){
         Transaction transaction = new Transaction();
-        transaction.setAmount(BigDecimal.valueOf(5000));
+        transaction.setAmount(BigDecimal.valueOf(49999));
 
         RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(transaction);
 
@@ -56,5 +56,16 @@ class RiskAssessmentServiceImplTest {
         assertEquals(0, riskAssessment.getRiskScore());
         assertEquals(RiskLevel.LOW, riskAssessment.getRiskLevel());
         assertTrue(riskAssessment.getReasons().isEmpty());
+    }
+
+    @Test
+    void shouldThrowExceptionWhenAmountIsNull(){
+        Transaction transaction = new Transaction();
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            riskAssessmentService.assessTransaction(transaction);});
+
+        assertEquals("Amount must not be null", exception.getMessage());
+
     }
 }
