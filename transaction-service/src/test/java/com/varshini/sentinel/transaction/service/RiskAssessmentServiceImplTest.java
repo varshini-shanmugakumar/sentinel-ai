@@ -3,15 +3,27 @@ package com.varshini.sentinel.transaction.service;
 import com.varshini.sentinel.transaction.model.RiskAssessment;
 import com.varshini.sentinel.transaction.model.RiskLevel;
 import com.varshini.sentinel.transaction.model.Transaction;
+import com.varshini.sentinel.transaction.repository.TransactionRepository;
 import com.varshini.sentinel.transaction.service.impl.RiskAssessmentServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.when;
+import java.util.List;
 
 @ExtendWith(MockitoExtension.class)
 class RiskAssessmentServiceImplTest {
@@ -19,10 +31,14 @@ class RiskAssessmentServiceImplTest {
     @InjectMocks
     RiskAssessmentServiceImpl riskAssessmentService;
 
+    @Mock
+    TransactionRepository transactionRepository;
+
     @Test
     void shouldTestHighValueTransaction(){
         Transaction transaction = new Transaction();
         transaction.setAmount(BigDecimal.valueOf(100000));
+        transaction.setTimeStamp(Instant.now());
 
         RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(transaction);
 
@@ -36,6 +52,7 @@ class RiskAssessmentServiceImplTest {
     void shouldTestMediumValueTransaction(){
         Transaction transaction = new Transaction();
         transaction.setAmount(BigDecimal.valueOf(50000));
+        transaction.setTimeStamp(Instant.now());
 
         RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(transaction);
 
@@ -49,6 +66,7 @@ class RiskAssessmentServiceImplTest {
     void shouldTestLowValueTransaction(){
         Transaction transaction = new Transaction();
         transaction.setAmount(BigDecimal.valueOf(49999));
+        transaction.setTimeStamp(Instant.now());
 
         RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(transaction);
 
@@ -67,5 +85,73 @@ class RiskAssessmentServiceImplTest {
 
         assertEquals("Amount must not be null", exception.getMessage());
 
+    }
+
+    @Test
+    void shouldTestRapidTransactions(){
+        Transaction transaction1 = new Transaction();
+        transaction1.setTransactionId(UUID.randomUUID());
+        transaction1.setFromAccount("ACC1001");
+        transaction1.setAmount(BigDecimal.valueOf(10000));
+        transaction1.setTimeStamp(Instant.now());
+
+        Transaction transaction2 = new Transaction();
+        transaction2.setTransactionId(UUID.randomUUID());
+        transaction2.setFromAccount("ACC1001");
+        transaction2.setAmount(BigDecimal.valueOf(30000));
+        transaction2.setTimeStamp(Instant.now());
+
+        Transaction transaction3 = new Transaction();
+        transaction3.setTransactionId(UUID.randomUUID());
+        transaction3.setFromAccount("ACC1001");
+        transaction3.setAmount(BigDecimal.valueOf(50000));
+        transaction3.setTimeStamp(Instant.now());
+
+        Transaction currentTransaction = new Transaction();
+        currentTransaction.setTransactionId(UUID.randomUUID());
+        currentTransaction.setFromAccount("ACC1001");
+        currentTransaction.setAmount(BigDecimal.valueOf(10000));
+        currentTransaction.setTimeStamp(Instant.now());
+
+        when(transactionRepository.findByFromAccountAndTimeStampAfter(eq("ACC1001"), any(Instant.class)))
+                .thenReturn(List.of(transaction1, transaction2, transaction3));
+
+        RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(currentTransaction);
+
+        assertNotNull(riskAssessment);
+        assertEquals(30, riskAssessment.getRiskScore());
+        assertEquals(RiskLevel.MEDIUM, riskAssessment.getRiskLevel());
+        assertTrue(riskAssessment.getReasons().contains("Multiple transactions in a short time period"));
+    }
+
+    @Test
+    void shouldTestNoRapidTransactions(){
+        Transaction transaction1 = new Transaction();
+        transaction1.setTransactionId(UUID.randomUUID());
+        transaction1.setFromAccount("ACC1001");
+        transaction1.setAmount(BigDecimal.valueOf(10000));
+        transaction1.setTimeStamp(Instant.now());
+
+        Transaction transaction2 = new Transaction();
+        transaction2.setTransactionId(UUID.randomUUID());
+        transaction2.setFromAccount("ACC1001");
+        transaction2.setAmount(BigDecimal.valueOf(30000));
+        transaction2.setTimeStamp(Instant.now());
+
+        Transaction currentTransaction = new Transaction();
+        currentTransaction.setTransactionId(UUID.randomUUID());
+        currentTransaction.setFromAccount("ACC1001");
+        currentTransaction.setAmount(BigDecimal.valueOf(10000));
+        currentTransaction.setTimeStamp(Instant.now());
+
+        when(transactionRepository.findByFromAccountAndTimeStampAfter(eq("ACC1001"), any(Instant.class)))
+                .thenReturn(List.of(transaction1, transaction2));
+
+        RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(currentTransaction);
+
+        assertNotNull(riskAssessment);
+        assertEquals(0, riskAssessment.getRiskScore());
+        assertEquals(RiskLevel.LOW, riskAssessment.getRiskLevel());
+        assertTrue(riskAssessment.getReasons().isEmpty());
     }
 }
