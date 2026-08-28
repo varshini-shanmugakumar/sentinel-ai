@@ -3,6 +3,7 @@ package com.varshini.sentinel.transaction.service;
 import com.varshini.sentinel.transaction.model.RiskAssessment;
 import com.varshini.sentinel.transaction.model.RiskLevel;
 import com.varshini.sentinel.transaction.model.Transaction;
+import com.varshini.sentinel.transaction.repository.RiskAssessmentRepository;
 import com.varshini.sentinel.transaction.repository.TransactionRepository;
 import com.varshini.sentinel.transaction.service.impl.RiskAssessmentServiceImpl;
 import org.junit.jupiter.api.Test;
@@ -17,11 +18,13 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import java.util.List;
 
@@ -34,11 +37,17 @@ class RiskAssessmentServiceImplTest {
     @Mock
     TransactionRepository transactionRepository;
 
+    @Mock
+    RiskAssessmentRepository riskAssessmentRepository;
+
     @Test
     void shouldTestHighValueTransaction(){
         Transaction transaction = new Transaction();
         transaction.setAmount(BigDecimal.valueOf(100000));
         transaction.setTimeStamp(Instant.now());
+
+        when(riskAssessmentRepository.save(any(RiskAssessment.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(transaction);
 
@@ -54,6 +63,9 @@ class RiskAssessmentServiceImplTest {
         transaction.setAmount(BigDecimal.valueOf(50000));
         transaction.setTimeStamp(Instant.now());
 
+        when(riskAssessmentRepository.save(any(RiskAssessment.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
         RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(transaction);
 
         assertNotNull(riskAssessment);
@@ -67,6 +79,9 @@ class RiskAssessmentServiceImplTest {
         Transaction transaction = new Transaction();
         transaction.setAmount(BigDecimal.valueOf(49999));
         transaction.setTimeStamp(Instant.now());
+
+        when(riskAssessmentRepository.save(any(RiskAssessment.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(transaction);
 
@@ -115,6 +130,8 @@ class RiskAssessmentServiceImplTest {
 
         when(transactionRepository.findByFromAccountAndTimeStampAfter(eq("ACC1001"), any(Instant.class)))
                 .thenReturn(List.of(transaction1, transaction2, transaction3));
+        when(riskAssessmentRepository.save(any(RiskAssessment.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(currentTransaction);
 
@@ -146,6 +163,8 @@ class RiskAssessmentServiceImplTest {
 
         when(transactionRepository.findByFromAccountAndTimeStampAfter(eq("ACC1001"), any(Instant.class)))
                 .thenReturn(List.of(transaction1, transaction2));
+        when(riskAssessmentRepository.save(any(RiskAssessment.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
 
         RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(currentTransaction);
 
@@ -153,5 +172,27 @@ class RiskAssessmentServiceImplTest {
         assertEquals(0, riskAssessment.getRiskScore());
         assertEquals(RiskLevel.LOW, riskAssessment.getRiskLevel());
         assertTrue(riskAssessment.getReasons().isEmpty());
+    }
+
+    @Test
+    void shouldSaveRiskAssessment(){
+        Transaction transaction = new Transaction();
+        transaction.setAmount(BigDecimal.valueOf(10000));
+        transaction.setTimeStamp(Instant.now());
+        transaction.setFromAccount("ACC1001");
+        transaction.setTransactionId(UUID.randomUUID());
+        transaction.setToAccount("ACC1002");
+
+        when(transactionRepository.findByFromAccountAndTimeStampAfter(
+                anyString(),
+                any(Instant.class)
+        )).thenReturn(List.of());
+        when(riskAssessmentRepository.save(any(RiskAssessment.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        RiskAssessment result = riskAssessmentService.assessTransaction(transaction);
+
+        verify(riskAssessmentRepository).save(any(RiskAssessment.class));
+        assertNotNull(result);
     }
 }

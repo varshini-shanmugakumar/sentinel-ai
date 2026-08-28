@@ -3,6 +3,7 @@ package com.varshini.sentinel.transaction.service.impl;
 import com.varshini.sentinel.transaction.model.RiskAssessment;
 import com.varshini.sentinel.transaction.model.RiskLevel;
 import com.varshini.sentinel.transaction.model.Transaction;
+import com.varshini.sentinel.transaction.repository.RiskAssessmentRepository;
 import com.varshini.sentinel.transaction.repository.TransactionRepository;
 import com.varshini.sentinel.transaction.service.RiskAssessmentService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ public class RiskAssessmentServiceImpl implements RiskAssessmentService {
     private static final BigDecimal MEDIUM_VALUE_THRESHOLD = BigDecimal.valueOf(50000);
 
     private final TransactionRepository transactionRepository;
+    private final RiskAssessmentRepository riskAssessmentRepository;
 
     @Override
     public RiskAssessment assessTransaction(Transaction transaction){
@@ -60,7 +62,7 @@ public class RiskAssessmentServiceImpl implements RiskAssessmentService {
         riskAssessment.setTransactionId(transaction.getTransactionId());
         riskAssessment.setRiskScore(riskScore);
 
-        return riskAssessment;
+        return riskAssessmentRepository.save(riskAssessment);
     }
 
     private RiskLevel calculateRiskLevel(int riskScore){
