@@ -29,6 +29,8 @@ class TransactionServiceImplTest {
     private TransactionRepository transactionRepository;
     @InjectMocks
     private TransactionServiceImpl transactionService;
+    @Mock
+    private RiskAssessmentService riskAssessmentService;
 
 
     @Test
@@ -40,6 +42,7 @@ class TransactionServiceImplTest {
 
         when(transactionRepository.save(any(Transaction.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
+
         Transaction result = transactionService.createTransaction(request);
 
         assertNotNull(result);
@@ -51,6 +54,7 @@ class TransactionServiceImplTest {
         assertNotNull(result.getTransactionId());
         assertNotNull(result.getTimeStamp());
         verify(transactionRepository).save(any(Transaction.class));
+        verify(riskAssessmentService).assessTransaction(result);
     }
 
     @Test
@@ -65,6 +69,7 @@ class TransactionServiceImplTest {
                 () -> transactionService.createTransaction(request)
         );
         verify(transactionRepository, never()).save(any(Transaction.class));
+        verify(riskAssessmentService, never()).assessTransaction(any(Transaction.class));
     }
 
     @Test
