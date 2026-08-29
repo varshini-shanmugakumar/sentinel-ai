@@ -2,6 +2,7 @@ package com.varshini.sentinel.transaction.service;
 
 import com.varshini.sentinel.transaction.dto.CreateTransactionRequest;
 import com.varshini.sentinel.transaction.exception.HighRiskTransactionException;
+import com.varshini.sentinel.transaction.exception.RiskAssessmentException;
 import com.varshini.sentinel.transaction.exception.SameAccountTransferException;
 import com.varshini.sentinel.transaction.exception.TransactionNotFoundException;
 import com.varshini.sentinel.transaction.model.RiskAssessment;
@@ -260,6 +261,17 @@ class TransactionServiceImplTest {
         );
 
         assertEquals("Risk engine unavailable", exception.getMessage());
+
+        verify(transactionRepository, never()).save(any(Transaction.class));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenRiskAssessmentFails(){
+        when(riskAssessmentService.assessTransaction(any(Transaction.class)))
+                .thenReturn(null);
+
+        assertThrows(RiskAssessmentException.class,
+                () -> transactionService.createTransaction(request));
 
         verify(transactionRepository, never()).save(any(Transaction.class));
     }

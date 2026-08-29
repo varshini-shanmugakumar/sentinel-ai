@@ -2,6 +2,7 @@ package com.varshini.sentinel.transaction.service.impl;
 
 import com.varshini.sentinel.transaction.dto.CreateTransactionRequest;
 import com.varshini.sentinel.transaction.exception.HighRiskTransactionException;
+import com.varshini.sentinel.transaction.exception.RiskAssessmentException;
 import com.varshini.sentinel.transaction.exception.SameAccountTransferException;
 import com.varshini.sentinel.transaction.exception.TransactionNotFoundException;
 import com.varshini.sentinel.transaction.model.RiskAssessment;
@@ -41,6 +42,10 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setCurrency(request.getCurrency());
 
         RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(transaction);
+
+        if (riskAssessment == null) {
+            throw new RiskAssessmentException("Risk assessment could not be completed");
+        }
 
         if(riskAssessment.getRiskLevel() == RiskLevel.HIGH){
             throw new HighRiskTransactionException("Transaction blocked due to high risk");
