@@ -1,8 +1,11 @@
 package com.varshini.sentinel.transaction.service.impl;
 
 import com.varshini.sentinel.transaction.dto.CreateTransactionRequest;
+import com.varshini.sentinel.transaction.exception.HighRiskTransactionException;
 import com.varshini.sentinel.transaction.exception.SameAccountTransferException;
 import com.varshini.sentinel.transaction.exception.TransactionNotFoundException;
+import com.varshini.sentinel.transaction.model.RiskAssessment;
+import com.varshini.sentinel.transaction.model.RiskLevel;
 import com.varshini.sentinel.transaction.model.Transaction;
 import com.varshini.sentinel.transaction.model.TransactionStatus;
 import com.varshini.sentinel.transaction.repository.TransactionRepository;
@@ -37,9 +40,13 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setAmount(request.getAmount());
         transaction.setCurrency(request.getCurrency());
 
-        Transaction savedTransaction = transactionRepository.save(transaction);
-        riskAssessmentService.assessTransaction(savedTransaction);
-        return savedTransaction;
+        RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(transaction);
+
+        if(riskAssessment.getRiskLevel() == RiskLevel.HIGH){
+            throw new HighRiskTransactionException("Transaction blocked due to high risk");
+        }
+
+        return transactionRepository.save(transaction);
     }
 
     @Override
