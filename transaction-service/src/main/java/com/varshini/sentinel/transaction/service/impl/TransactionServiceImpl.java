@@ -25,6 +25,18 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionRepository transactionRepository;
     private final RiskAssessmentService riskAssessmentService;
 
+    /**
+     * Creates a transaction after assessing its risk.
+     *
+     * <p>The transaction is persisted only if the risk assessment
+     * does not classify it as HIGH risk.</p>
+     *
+     * @param request transaction creation request
+     * @return the persisted transaction
+     * @throws SameAccountTransferException if source and destination accounts are the same
+     * @throws HighRiskTransactionException if the transaction is classified as HIGH risk
+     * @throws RiskAssessmentException if risk assessment cannot be completed
+     */
     public Transaction  createTransaction(CreateTransactionRequest request) throws SameAccountTransferException {
         Transaction transaction = new Transaction();
         transaction.setTransactionId(UUID.randomUUID());
