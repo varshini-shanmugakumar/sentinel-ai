@@ -1,8 +1,12 @@
 package com.varshini.sentinel.transaction.service;
 
 import com.varshini.sentinel.transaction.dto.CreateTransactionRequest;
+import com.varshini.sentinel.transaction.exception.HighRiskTransactionException;
+import com.varshini.sentinel.transaction.exception.RiskAssessmentException;
 import com.varshini.sentinel.transaction.exception.SameAccountTransferException;
 import com.varshini.sentinel.transaction.exception.TransactionNotFoundException;
+import com.varshini.sentinel.transaction.model.RiskAssessment;
+import com.varshini.sentinel.transaction.model.RiskLevel;
 import com.varshini.sentinel.transaction.model.Transaction;
 import com.varshini.sentinel.transaction.model.TransactionStatus;
 import com.varshini.sentinel.transaction.repository.TransactionRepository;
@@ -29,6 +33,8 @@ class TransactionServiceImplTest {
     private TransactionRepository transactionRepository;
     @InjectMocks
     private TransactionServiceImpl transactionService;
+    @Mock
+    private RiskAssessmentService riskAssessmentService;
 
 
     @Test
@@ -38,8 +44,14 @@ class TransactionServiceImplTest {
         request.setAmount(new BigDecimal("1000"));
         request.setCurrency("INR");
 
+        RiskAssessment riskAssessment = new RiskAssessment();
+        riskAssessment.setRiskLevel(RiskLevel.LOW);
+
+        when(riskAssessmentService.assessTransaction(any()))
+                .thenReturn(riskAssessment);
         when(transactionRepository.save(any(Transaction.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
+
         Transaction result = transactionService.createTransaction(request);
 
         assertNotNull(result);
@@ -51,6 +63,7 @@ class TransactionServiceImplTest {
         assertNotNull(result.getTransactionId());
         assertNotNull(result.getTimeStamp());
         verify(transactionRepository).save(any(Transaction.class));
+        verify(riskAssessmentService).assessTransaction(result);
     }
 
     @Test
@@ -65,6 +78,7 @@ class TransactionServiceImplTest {
                 () -> transactionService.createTransaction(request)
         );
         verify(transactionRepository, never()).save(any(Transaction.class));
+        verify(riskAssessmentService, never()).assessTransaction(any(Transaction.class));
     }
 
     @Test
@@ -218,6 +232,48 @@ class TransactionServiceImplTest {
         assertNotNull(result);
         assertEquals(transactions, result);
         verify(transactionRepository).findByStatus(TransactionStatus.PENDING);
+    }
+
+    @Test
+    void shouldThrowExceptionForHighRiskTransaction() {
+        RiskAssessment riskAssessment = new RiskAssessment();
+        riskAssessment.setRiskLevel(RiskLevel.HIGH);
+
+        when(riskAssessmentService.assessTransaction(any(Transaction.class)))
+                .thenReturn(riskAssessment);
+
+        assertThrows(
+                HighRiskTransactionException.class,
+                () -> transactionService.createTransaction(request)
+        );
+
+        verify(transactionRepository, never()).save(any(Transaction.class));
+    }
+
+    @Test
+    void shouldNotSaveTransactionIfRiskEngineFails(){
+        when(riskAssessmentService.assessTransaction(any(Transaction.class)))
+                .thenThrow(new RuntimeException("Risk engine unavailable"));
+
+        RuntimeException exception = assertThrows(
+                RuntimeException.class,
+                () -> transactionService.createTransaction(request)
+        );
+
+        assertEquals("Risk engine unavailable", exception.getMessage());
+
+        verify(transactionRepository, never()).save(any(Transaction.class));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenRiskAssessmentFails(){
+        when(riskAssessmentService.assessTransaction(any(Transaction.class)))
+                .thenReturn(null);
+
+        assertThrows(RiskAssessmentException.class,
+                () -> transactionService.createTransaction(request));
+
+        verify(transactionRepository, never()).save(any(Transaction.class));
     }
 
 }

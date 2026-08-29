@@ -1,11 +1,16 @@
 package com.varshini.sentinel.transaction.service.impl;
 
 import com.varshini.sentinel.transaction.dto.CreateTransactionRequest;
+import com.varshini.sentinel.transaction.exception.HighRiskTransactionException;
+import com.varshini.sentinel.transaction.exception.RiskAssessmentException;
 import com.varshini.sentinel.transaction.exception.SameAccountTransferException;
 import com.varshini.sentinel.transaction.exception.TransactionNotFoundException;
+import com.varshini.sentinel.transaction.model.RiskAssessment;
+import com.varshini.sentinel.transaction.model.RiskLevel;
 import com.varshini.sentinel.transaction.model.Transaction;
 import com.varshini.sentinel.transaction.model.TransactionStatus;
 import com.varshini.sentinel.transaction.repository.TransactionRepository;
+import com.varshini.sentinel.transaction.service.RiskAssessmentService;
 import com.varshini.sentinel.transaction.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,7 +23,20 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class TransactionServiceImpl implements TransactionService {
     private final TransactionRepository transactionRepository;
+    private final RiskAssessmentService riskAssessmentService;
 
+    /**
+     * Creates a transaction after assessing its risk.
+     *
+     * <p>The transaction is persisted only if the risk assessment
+     * does not classify it as HIGH risk.</p>
+     *
+     * @param request transaction creation request
+     * @return the persisted transaction
+     * @throws SameAccountTransferException if source and destination accounts are the same
+     * @throws HighRiskTransactionException if the transaction is classified as HIGH risk
+     * @throws RiskAssessmentException if risk assessment cannot be completed
+     */
     public Transaction  createTransaction(CreateTransactionRequest request) throws SameAccountTransferException {
         Transaction transaction = new Transaction();
         transaction.setTransactionId(UUID.randomUUID());
@@ -34,6 +52,16 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setToAccount(request.getToAccount());
         transaction.setAmount(request.getAmount());
         transaction.setCurrency(request.getCurrency());
+
+        RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(transaction);
+
+        if (riskAssessment == null) {
+            throw new RiskAssessmentException("Risk assessment could not be completed");
+        }
+
+        if(riskAssessment.getRiskLevel() == RiskLevel.HIGH){
+            throw new HighRiskTransactionException("Transaction blocked due to high risk");
+        }
 
         return transactionRepository.save(transaction);
     }
