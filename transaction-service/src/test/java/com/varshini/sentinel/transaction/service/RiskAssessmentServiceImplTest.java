@@ -195,4 +195,83 @@ class RiskAssessmentServiceImplTest {
         verify(riskAssessmentRepository).save(any(RiskAssessment.class));
         assertNotNull(result);
     }
+
+    private void createHistoricTransactions(){
+        Transaction transaction1 = new Transaction();
+        transaction1.setAmount(BigDecimal.valueOf(5000));
+        transaction1.setFromAccount("ACC1001");
+
+        Transaction transaction2 = new Transaction();
+        transaction2.setAmount(BigDecimal.valueOf(10000));
+        transaction2.setFromAccount("ACC1001");
+
+        Transaction transaction3 = new Transaction();
+        transaction3.setAmount(BigDecimal.valueOf(5000));
+        transaction3.setFromAccount("ACC1001");
+
+        when(transactionRepository.findByFromAccount("ACC1001"))
+                .thenReturn(List.of(transaction1, transaction2, transaction3));
+        when(riskAssessmentRepository.save(any(RiskAssessment.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+    }
+
+    @Test
+    void shouldTestUnusuallyHighAmount(){
+        createHistoricTransactions();
+
+        Transaction currentTransaction = new Transaction();
+        currentTransaction.setFromAccount("ACC1001");
+        currentTransaction.setAmount(BigDecimal.valueOf(25000));
+        currentTransaction.setTimeStamp(Instant.now());
+
+        RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(currentTransaction);
+
+        assertNotNull(riskAssessment);
+        assertEquals(25, riskAssessment.getRiskScore());
+        assertTrue(riskAssessment.getReasons().contains("Transaction amount is unusually high"));
+    }
+
+    @Test
+    void shouldNotFlagTransactionWhenAmountIsWithinHistoricalRange(){
+        createHistoricTransactions();
+
+        Transaction currentTransaction = new Transaction();
+        currentTransaction.setFromAccount("ACC1001");
+        currentTransaction.setAmount(BigDecimal.valueOf(15000));
+        currentTransaction.setTimeStamp(Instant.now());
+
+        RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(currentTransaction);
+
+        assertNotNull(riskAssessment);
+        assertEquals(0, riskAssessment.getRiskScore());
+        assertEquals(RiskLevel.LOW, riskAssessment.getRiskLevel());
+        assertTrue(riskAssessment.getReasons().isEmpty());
+    }
+
+    @Test
+    void shouldTestInsufficientHistory() {
+        Transaction transaction1 = new Transaction();
+        transaction1.setAmount(BigDecimal.valueOf(5000));
+        transaction1.setFromAccount("ACC1001");
+
+        Transaction transaction2 = new Transaction();
+        transaction2.setAmount(BigDecimal.valueOf(10000));
+        transaction2.setFromAccount("ACC1001");
+
+        when(transactionRepository.findByFromAccount("ACC1001"))
+                .thenReturn(List.of(transaction1, transaction2));
+        when(riskAssessmentRepository.save(any(RiskAssessment.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Transaction currentTransaction = new Transaction();
+        currentTransaction.setFromAccount("ACC1001");
+        currentTransaction.setAmount(BigDecimal.valueOf(15000));
+        currentTransaction.setTimeStamp(Instant.now());
+
+        RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(currentTransaction);
+
+        assertNotNull(riskAssessment);
+        assertEquals(0, riskAssessment.getRiskScore());
+        assertTrue(riskAssessment.getReasons().isEmpty());
+    }
 }

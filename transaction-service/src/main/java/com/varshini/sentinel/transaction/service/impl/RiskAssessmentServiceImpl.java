@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -52,6 +53,20 @@ public class RiskAssessmentServiceImpl implements RiskAssessmentService {
         if(recentTransactionCount >= 3){
             riskScore += 30;
             reasons.add("Multiple transactions in a short time period");
+        }
+
+        List<Transaction> historicalTransactions =
+                transactionRepository.findByFromAccount(transaction.getFromAccount());
+
+        if(historicalTransactions.size() >= 3){
+            BigDecimal averageAmount = historicalTransactions.stream()
+                    .map(Transaction::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .divide(BigDecimal.valueOf(historicalTransactions.size()), 2, RoundingMode.HALF_UP);
+            BigDecimal threshold = averageAmount.multiply(BigDecimal.valueOf(3));
+            if(transaction.getAmount().compareTo(threshold) >= 0){
+                riskScore += 25;
+                reasons.add("Transaction amount is unusually high");
+            }
         }
 
         RiskLevel riskLevel = calculateRiskLevel(riskScore);
