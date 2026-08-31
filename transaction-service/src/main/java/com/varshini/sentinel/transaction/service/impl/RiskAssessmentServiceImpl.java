@@ -10,10 +10,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +23,9 @@ public class RiskAssessmentServiceImpl implements RiskAssessmentService {
 
     private static final BigDecimal HIGH_VALUE_THRESHOLD = BigDecimal.valueOf(100000);
     private static final BigDecimal MEDIUM_VALUE_THRESHOLD = BigDecimal.valueOf(50000);
+    private static final int MIN_HISTORICAL_TXN_COUNT = 3;
+    private static final int HISTORICAL_WINDOW_DAYS = 90;
+    private static final int HIGH_AMOUNT_MULTIPLIER = 3;
 
     private final TransactionRepository transactionRepository;
     private final RiskAssessmentRepository riskAssessmentRepository;
@@ -52,6 +57,35 @@ public class RiskAssessmentServiceImpl implements RiskAssessmentService {
         if(recentTransactionCount >= 3){
             riskScore += 30;
             reasons.add("Multiple transactions in a short time period");
+        }
+
+        Instant historicalCutoff = transaction.getTimeStamp().minus(HISTORICAL_WINDOW_DAYS, ChronoUnit.DAYS);
+
+        List<Transaction> historicalTransactions =
+                transactionRepository.findByFromAccountAndTimeStampAfter(transaction.getFromAccount(), historicalCutoff);
+
+        List<BigDecimal> historicalAmounts = historicalTransactions.stream()
+                .map(Transaction::getAmount)
+                .filter(Objects::nonNull)
+                .toList();
+
+        if (historicalAmounts.size() >= MIN_HISTORICAL_TXN_COUNT) {
+
+            BigDecimal averageAmount = historicalAmounts.stream()
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .divide(
+                            BigDecimal.valueOf(historicalAmounts.size()),
+                            2,
+                            RoundingMode.HALF_UP
+                    );
+
+            BigDecimal threshold = averageAmount
+                    .multiply(BigDecimal.valueOf(HIGH_AMOUNT_MULTIPLIER));
+
+            if (transaction.getAmount().compareTo(threshold) > 0) {
+                riskScore += 25;
+                reasons.add("Transaction amount is unusually high");
+            }
         }
 
         RiskLevel riskLevel = calculateRiskLevel(riskScore);

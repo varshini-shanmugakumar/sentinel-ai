@@ -53,6 +53,8 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setAmount(request.getAmount());
         transaction.setCurrency(request.getCurrency());
 
+        // Risk assessment occurs before transaction persistence, therefore the historical transaction query does not
+        // include the transaction currently being assessed.
         RiskAssessment riskAssessment = riskAssessmentService.assessTransaction(transaction);
 
         if (riskAssessment == null) {
