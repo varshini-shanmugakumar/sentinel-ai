@@ -15,5 +15,4 @@ public interface TransactionRepository extends MongoRepository<Transaction, Stri
     Optional<Transaction> findByTransactionId(UUID transactionId);
     List<Transaction> findByStatus(TransactionStatus status);
     List<Transaction> findByFromAccountAndTimeStampAfter(String fromAccount, Instant timeStamp);
-    List<Transaction> findByFromAccount(String fromAccount);
 }

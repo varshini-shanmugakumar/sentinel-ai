@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +23,8 @@ public class RiskAssessmentServiceImpl implements RiskAssessmentService {
 
     private static final BigDecimal HIGH_VALUE_THRESHOLD = BigDecimal.valueOf(100000);
     private static final BigDecimal MEDIUM_VALUE_THRESHOLD = BigDecimal.valueOf(50000);
+    private static final int MIN_HISTORICAL_TXN_COUNT = 3;
+    private static final int HISTORICAL_WINDOW_DAYS = 90;
 
     private final TransactionRepository transactionRepository;
     private final RiskAssessmentRepository riskAssessmentRepository;
@@ -55,14 +58,22 @@ public class RiskAssessmentServiceImpl implements RiskAssessmentService {
             reasons.add("Multiple transactions in a short time period");
         }
 
-        List<Transaction> historicalTransactions =
-                transactionRepository.findByFromAccount(transaction.getFromAccount());
+        Instant historicalCutoff = transaction.getTimeStamp().minus(HISTORICAL_WINDOW_DAYS, ChronoUnit.DAYS);
 
-        if(historicalTransactions.size() >= 3){
+        List<Transaction> historicalTransactions =
+                transactionRepository.findByFromAccountAndTimeStampAfter(transaction.getFromAccount(), historicalCutoff);
+        List<BigDecimal> historicalAmounts = historicalTransactions.stream()
+                .map(Transaction::getAmount)
+                .filter(Objects::nonNull)
+                .toList();
+
+        if(historicalAmounts.size() >= MIN_HISTORICAL_TXN_COUNT){
             BigDecimal averageAmount = historicalTransactions.stream()
-                    .map(Transaction::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .map(Transaction::getAmount)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
                     .divide(BigDecimal.valueOf(historicalTransactions.size()), 2, RoundingMode.HALF_UP);
-            BigDecimal threshold = averageAmount.multiply(BigDecimal.valueOf(3));
+            BigDecimal threshold = averageAmount.multiply(BigDecimal.valueOf(MIN_HISTORICAL_TXN_COUNT));
             if(transaction.getAmount().compareTo(threshold) >= 0){
                 riskScore += 25;
                 reasons.add("Transaction amount is unusually high");
