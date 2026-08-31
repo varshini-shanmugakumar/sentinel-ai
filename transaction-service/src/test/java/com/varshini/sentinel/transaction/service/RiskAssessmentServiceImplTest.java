@@ -373,7 +373,7 @@ class RiskAssessmentServiceImplTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         Transaction currentTransaction =
-                createTransaction(10000, currentTime);
+                createTransaction(14000, currentTime);
 
         RiskAssessment result =
                 riskAssessmentService.assessTransaction(currentTransaction);

@@ -25,6 +25,7 @@ public class RiskAssessmentServiceImpl implements RiskAssessmentService {
     private static final BigDecimal MEDIUM_VALUE_THRESHOLD = BigDecimal.valueOf(50000);
     private static final int MIN_HISTORICAL_TXN_COUNT = 3;
     private static final int HISTORICAL_WINDOW_DAYS = 90;
+    private static final int HIGH_AMOUNT_MULTIPLIER = 3;
 
     private final TransactionRepository transactionRepository;
     private final RiskAssessmentRepository riskAssessmentRepository;
@@ -62,19 +63,26 @@ public class RiskAssessmentServiceImpl implements RiskAssessmentService {
 
         List<Transaction> historicalTransactions =
                 transactionRepository.findByFromAccountAndTimeStampAfter(transaction.getFromAccount(), historicalCutoff);
+
         List<BigDecimal> historicalAmounts = historicalTransactions.stream()
                 .map(Transaction::getAmount)
                 .filter(Objects::nonNull)
                 .toList();
 
-        if(historicalAmounts.size() >= MIN_HISTORICAL_TXN_COUNT){
-            BigDecimal averageAmount = historicalTransactions.stream()
-                    .map(Transaction::getAmount)
-                    .filter(Objects::nonNull)
+        if (historicalAmounts.size() >= MIN_HISTORICAL_TXN_COUNT) {
+
+            BigDecimal averageAmount = historicalAmounts.stream()
                     .reduce(BigDecimal.ZERO, BigDecimal::add)
-                    .divide(BigDecimal.valueOf(historicalTransactions.size()), 2, RoundingMode.HALF_UP);
-            BigDecimal threshold = averageAmount.multiply(BigDecimal.valueOf(MIN_HISTORICAL_TXN_COUNT));
-            if(transaction.getAmount().compareTo(threshold) >= 0){
+                    .divide(
+                            BigDecimal.valueOf(historicalAmounts.size()),
+                            2,
+                            RoundingMode.HALF_UP
+                    );
+
+            BigDecimal threshold = averageAmount
+                    .multiply(BigDecimal.valueOf(HIGH_AMOUNT_MULTIPLIER));
+
+            if (transaction.getAmount().compareTo(threshold) > 0) {
                 riskScore += 25;
                 reasons.add("Transaction amount is unusually high");
             }
