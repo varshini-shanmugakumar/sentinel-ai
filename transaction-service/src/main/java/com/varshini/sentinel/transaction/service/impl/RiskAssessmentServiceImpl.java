@@ -51,8 +51,11 @@ public class RiskAssessmentServiceImpl implements RiskAssessmentService {
         List<Transaction> recentTransactions = transactionRepository.
                 findByFromAccountAndTimeStampAfter(transaction.getFromAccount(), cutoffTime);
         long recentTransactionCount = recentTransactions.stream()
-                .filter(existingTransaction -> !existingTransaction.getTransactionId()
-                        .equals(transaction.getTransactionId()))
+                .filter(existingTransaction ->
+                        !Objects.equals(
+                                existingTransaction.getTransactionId(),
+                                transaction.getTransactionId()
+                        ))
                 .count();
         if(recentTransactionCount >= 3){
             riskScore += 30;
